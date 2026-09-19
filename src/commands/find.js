@@ -9,6 +9,7 @@ import { copyToClipboard } from "../services/clipboard.js";
 import { ensureAuthenticated } from "./auth.js";
 import { formatBytes, formatDate, applyTransformToUrl } from "../utils/formatters.js";
 import { resolveDownloadPath } from "../utils/paths.js";
+import { downloadFile } from "../utils/download.js";
 import {
   createSpinner,
   printSuccess,
@@ -16,63 +17,6 @@ import {
   printInfo,
   printSummary,
 } from "../utils/ui.js";
-
-/**
- * Downloads a file from a URL to a local destination path.
- * @param {string} url 
- * @param {string} destPath 
- * @returns {Promise<void>}
- */
-export function downloadFile(url, destPath) {
-  return new Promise((resolve, reject) => {
-    let fileStream;
-    try {
-      fileStream = fs.createWriteStream(destPath);
-    } catch (err) {
-      return reject(err);
-    }
-
-    fileStream.on("error", (err) => {
-      try {
-        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-      } catch {}
-      reject(err);
-    });
-
-    const protocol = url.startsWith("https") ? https : http;
-
-    const request = protocol.get(url, (response) => {
-      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        fileStream.close();
-        return downloadFile(response.headers.location, destPath)
-          .then(resolve)
-          .catch(reject);
-      }
-
-      if (response.statusCode !== 200) {
-        fileStream.close();
-        try {
-          if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-        } catch {}
-        return reject(new Error(`Failed to download (HTTP ${response.statusCode})`));
-      }
-
-      response.pipe(fileStream);
-      fileStream.on("finish", () => {
-        fileStream.close();
-        resolve();
-      });
-    });
-
-    request.on("error", (err) => {
-      fileStream.close();
-      try {
-        if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-      } catch {}
-      reject(err);
-    });
-  });
-}
 
 /**
  * Handles 'img find [query]' command.

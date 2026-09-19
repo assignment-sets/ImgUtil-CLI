@@ -7,7 +7,7 @@ import { copyToClipboard } from "../services/clipboard.js";
 import { ensureAuthenticated } from "./auth.js";
 import { applyTransformToUrl } from "../utils/formatters.js";
 import { resolveDownloadPath } from "../utils/paths.js";
-import { downloadFile } from "./find.js";
+import { downloadFile } from "../utils/download.js";
 import {
   createSpinner,
   printSuccess,
