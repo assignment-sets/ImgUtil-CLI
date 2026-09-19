@@ -94,17 +94,20 @@ export async function uploadImage({
     finalFileName = `upload_${Date.now()}.png`;
   }
 
+  // Convert buffer to Web File instance for @imagekit/nodejs form serialization
+  const fileObj = await ImageKit.toFile(buffer, finalFileName);
   const formattedTags = Array.isArray(tags) ? tags : [tags].filter(Boolean);
 
   const payload = {
-    file: buffer,
+    file: fileObj,
     fileName: finalFileName,
     tags: formattedTags,
     useUniqueFileName: false,
   };
 
-  if (folder) {
-    payload.folder = folder.startsWith("/") ? folder : `/${folder}`;
+  if (folder && folder !== "/" && folder.trim()) {
+    const trimmed = folder.trim();
+    payload.folder = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   }
 
   const result = await client.files.upload(payload);
