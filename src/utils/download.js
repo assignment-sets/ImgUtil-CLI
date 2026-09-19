@@ -32,8 +32,17 @@ export function downloadFile(url, destPath, options = {}) {
   } = options;
 
   return new Promise((resolve, reject) => {
+    const unlinkDest = () => {
+      try {
+        if (fs.existsSync(destPath)) {
+          fs.unlinkSync(destPath);
+        }
+      } catch {}
+    };
+
     // 1. Guard against unbounded redirects
     if (redirectCount > maxRedirects) {
+      unlinkDest();
       return reject(
         new Error(`Exceeded maximum redirect limit of ${maxRedirects}`)
       );
@@ -41,6 +50,7 @@ export function downloadFile(url, destPath, options = {}) {
 
     // 2. Guard against redirect loops
     if (visitedUrls.has(url)) {
+      unlinkDest();
       return reject(new Error(`Detected redirect loop for URL: ${url}`));
     }
     visitedUrls.add(url);
@@ -50,6 +60,7 @@ export function downloadFile(url, destPath, options = {}) {
     try {
       parsedUrl = new URL(url);
     } catch {
+      unlinkDest();
       return reject(new Error(`Invalid URL: ${url}`));
     }
 
@@ -59,13 +70,14 @@ export function downloadFile(url, destPath, options = {}) {
     } else if (parsedUrl.protocol === "http:") {
       protocol = http;
     } else {
+      unlinkDest();
       return reject(
         new Error(`Unsupported protocol '${parsedUrl.protocol}' in URL: ${url}`)
       );
     }
 
-    let fileStream;
-    let request;
+    let fileStream = null;
+    let request = null;
     let isCleanedUp = false;
 
     const cleanup = () => {
@@ -76,23 +88,8 @@ export function downloadFile(url, destPath, options = {}) {
           fileStream.destroy();
         } catch {}
       }
-      try {
-        if (fs.existsSync(destPath)) {
-          fs.unlinkSync(destPath);
-        }
-      } catch {}
+      unlinkDest();
     };
-
-    try {
-      fileStream = fs.createWriteStream(destPath);
-    } catch (err) {
-      return reject(err);
-    }
-
-    fileStream.on("error", (err) => {
-      cleanup();
-      reject(err);
-    });
 
     let downloadedBytes = 0;
 
@@ -103,15 +100,6 @@ export function downloadFile(url, destPath, options = {}) {
         response.statusCode < 400 &&
         response.headers.location
       ) {
-        if (fileStream) {
-          try {
-            fileStream.destroy();
-          } catch {}
-        }
-        try {
-          if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
-        } catch {}
-
         const nextUrl = new URL(response.headers.location, url).toString();
         return downloadFile(nextUrl, destPath, {
           maxRedirects,
@@ -147,7 +135,20 @@ export function downloadFile(url, destPath, options = {}) {
         }
       }
 
-      // 7. Track stream chunks to enforce maxBytes cap
+      // 7. Initialize file stream only on verified 200 OK response
+      try {
+        fileStream = fs.createWriteStream(destPath);
+      } catch (err) {
+        cleanup();
+        return reject(err);
+      }
+
+      fileStream.on("error", (err) => {
+        cleanup();
+        reject(err);
+      });
+
+      // 8. Track stream chunks to enforce maxBytes cap
       response.on("data", (chunk) => {
         downloadedBytes += chunk.length;
         if (downloadedBytes > maxBytes) {
@@ -175,7 +176,7 @@ export function downloadFile(url, destPath, options = {}) {
       response.pipe(fileStream);
     });
 
-    // 8. Request timeout handling
+    // 9. Request timeout handling
     request.on("timeout", () => {
       request.destroy();
       cleanup();
