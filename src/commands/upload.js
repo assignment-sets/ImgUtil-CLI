@@ -45,7 +45,7 @@ export async function handleUpload(filePath, options = {}) {
 
   const fileName = options.name || path.basename(resolvedPath);
   const config = getConfig();
-  const folder = options.folder || config.defaultFolder || "/";
+  const folder = options.folder ? options.folder.trim() : null;
 
   // Combine user tags with default config tags
   const tags = [

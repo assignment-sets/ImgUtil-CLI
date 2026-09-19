@@ -119,18 +119,12 @@ export async function runOnboardingWizard(options = {}) {
   console.log(pc.bold(pc.cyan("Step 2: General Preferences")));
   const currentConfig = getConfig();
 
-  const defaultFolder = await input({
-    message: "Default cloud upload folder:",
-    default: currentConfig.defaultFolder || "/",
-  });
-
   const autoCopy = await confirm({
     message: "Automatically copy uploaded CDN links to clipboard?",
     default: currentConfig.autoCopy !== false,
   });
 
   setConfig({
-    defaultFolder: defaultFolder.trim(),
     autoCopy,
   });
 

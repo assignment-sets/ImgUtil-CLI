@@ -8,15 +8,15 @@ describe("config service", () => {
 
   it("should return default config when freshly initialized", () => {
     const config = getConfig();
-    expect(config.defaultFolder).toBe("/");
     expect(config.autoCopy).toBe(true);
+    expect(config.autoOpen).toBe(false);
     expect(Array.isArray(config.defaultTags)).toBe(true);
   });
 
   it("should update config values and persist them", () => {
-    setConfig({ defaultFolder: "/blog-images", autoCopy: false });
+    setConfig({ autoCopy: false, autoOpen: true });
     const updated = getConfig();
-    expect(updated.defaultFolder).toBe("/blog-images");
     expect(updated.autoCopy).toBe(false);
+    expect(updated.autoOpen).toBe(true);
   });
 });

@@ -6,7 +6,6 @@ const CONFIG_DIR = path.join(os.homedir(), ".config", "imgutil");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 
 const DEFAULT_CONFIG = {
-  defaultFolder: "/",
   defaultTags: [],
   autoCopy: true,
   autoOpen: false,
